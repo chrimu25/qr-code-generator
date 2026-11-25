@@ -1,0 +1,446 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>QR Studio — Customizable QR Code Generator</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: { sans: ['Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'] }
+        }
+      }
+    };
+  </script>
+  <style type="text/tailwindcss">
+    body {
+      background-image:
+        radial-gradient(55rem 28rem at 115% -10%, rgba(99, 102, 241, 0.09), transparent),
+        radial-gradient(45rem 24rem at -15% 110%, rgba(168, 85, 247, 0.07), transparent);
+      background-attachment: fixed;
+    }
+
+    .lbl       { @apply block text-[13px] font-semibold mb-1.5 text-gray-700 dark:text-gray-300; }
+    .inp       { @apply w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/60
+                 px-3.5 py-2.5 text-sm text-gray-900 dark:text-gray-100 placeholder-gray-400 transition
+                 focus:outline-none focus:ring-2 focus:ring-indigo-500/60 focus:border-indigo-400 focus:bg-white dark:focus:bg-gray-900; }
+    .inp-err   { @apply border-red-400 focus:ring-red-400/60 focus:border-red-400; }
+    .err-msg   { @apply mt-1.5 text-xs font-medium text-red-600 dark:text-red-400; }
+    .hint      { @apply mt-1.5 text-xs text-gray-400 dark:text-gray-500; }
+
+    .btn       { @apply inline-flex items-center justify-center gap-2 rounded-xl px-3.5 py-2.5 text-sm font-semibold
+                 border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900
+                 text-gray-700 dark:text-gray-200 shadow-sm
+                 hover:bg-gray-50 dark:hover:bg-gray-800 hover:border-gray-300 dark:hover:border-gray-600
+                 active:scale-[.98] transition-all
+                 disabled:opacity-40 disabled:cursor-not-allowed disabled:active:scale-100; }
+    .btn-primary { @apply border-transparent bg-gradient-to-r from-indigo-600 to-violet-600 text-white
+                 shadow-md shadow-indigo-500/25 hover:from-indigo-500 hover:to-violet-500; }
+
+    .section   { @apply rounded-2xl border border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900
+                 shadow-sm shadow-gray-200/40 dark:shadow-none overflow-hidden; }
+    .section > summary { @apply flex items-center justify-between cursor-pointer select-none px-5 py-4 text-sm font-semibold
+                 text-gray-800 dark:text-gray-100 hover:bg-gray-50/70 dark:hover:bg-gray-800/40 transition; }
+    .section-body { @apply px-5 pb-5 pt-2 space-y-4 border-t border-gray-100 dark:border-gray-800; }
+    .reset-btn { @apply text-xs font-semibold text-indigo-500 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 transition; }
+
+    .color-inp { @apply h-10 w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 cursor-pointer; }
+    input[type="color"] { -webkit-appearance: none; appearance: none; padding: 0; }
+    input[type="color"]::-webkit-color-swatch-wrapper { padding: 4px; }
+    input[type="color"]::-webkit-color-swatch { border-radius: 8px; border: 1px solid rgba(0, 0, 0, 0.08); }
+    input[type="color"]::-moz-color-swatch { border-radius: 8px; border: 1px solid rgba(0, 0, 0, 0.08); }
+
+    .range-inp { -webkit-appearance: none; appearance: none; width: 100%; height: 6px; border-radius: 9999px;
+                 background: #e5e7eb; outline: none; }
+    .dark .range-inp { background: #374151; }
+    .range-inp::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 18px; height: 18px;
+                 border-radius: 50%; background: #fff; border: 2px solid #6366f1;
+                 box-shadow: 0 1px 4px rgba(0, 0, 0, 0.25); cursor: pointer; transition: transform 0.1s; }
+    .range-inp::-webkit-slider-thumb:hover { transform: scale(1.15); }
+    .range-inp::-moz-range-thumb { width: 14px; height: 14px; border-radius: 50%; background: #fff;
+                 border: 2px solid #6366f1; box-shadow: 0 1px 4px rgba(0, 0, 0, 0.25); cursor: pointer; }
+    .out-badge { @apply text-xs font-bold text-indigo-500 dark:text-indigo-400 tabular-nums; }
+
+    .tab       { @apply inline-flex items-center gap-2 rounded-full pl-3.5 pr-4 py-2 text-[13px] font-semibold border
+                 border-gray-200/90 dark:border-gray-700/90 bg-white dark:bg-gray-900 shadow-sm
+                 text-gray-600 dark:text-gray-300
+                 hover:border-indigo-300 dark:hover:border-indigo-700 hover:text-indigo-600 dark:hover:text-indigo-300
+                 transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500; }
+    .tab[aria-selected="true"] { @apply border-transparent bg-gradient-to-r from-indigo-600 to-violet-600 text-white
+                 shadow-md shadow-indigo-500/30 hover:text-white; }
+
+    #qrBox canvas, #qrBox svg { max-width: 100%; height: auto; display: block; border-radius: 8px; }
+    #presetRow button[aria-pressed="true"] { @apply ring-2 ring-indigo-500 border-transparent; }
+
+    details.section > summary::-webkit-details-marker { display: none; }
+    summary { list-style: none; }
+    .chev { transition: transform 0.18s ease; }
+    details[open] > summary .chev { transform: rotate(180deg); }
+
+    @keyframes toast-in { from { opacity: 0; transform: translate(-50%, 8px); } to { opacity: 1; transform: translate(-50%, 0); } }
+    #toast:not(.hidden) { animation: toast-in 0.18s ease-out; }
+  </style>
+
+  <!-- QR engine + PDF export -->
+  <script src="https://unpkg.com/qr-code-styling@1.6.0-rc.1/lib/qr-code-styling.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+</head>
+
+<body class="bg-gray-50 dark:bg-gray-950 text-gray-900 dark:text-gray-100 min-h-screen antialiased">
+
+  <header class="sticky top-0 z-40 border-b border-gray-200/70 dark:border-gray-800/70 bg-white/75 dark:bg-gray-950/75 backdrop-blur-md">
+    <div class="max-w-6xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <span class="grid place-items-center w-9 h-9 rounded-xl bg-gradient-to-br from-indigo-600 to-violet-600 text-white shadow-md shadow-indigo-500/30">
+          <svg class="w-5 h-5" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+            <path d="M3 3h8v8H3V3zm2 2v4h4V5H5zm8-2h8v8h-8V3zm2 2v4h4V5h-4zM3 13h8v8H3v-8zm2 2v4h4v-4H5zm8-2h3v3h-3v-3zm5 0h3v3h-3v-3zm-5 5h3v3h-3v-3zm5 0h3v3h-3v-3z"/>
+          </svg>
+        </span>
+        <div>
+          <h1 class="text-[15px] font-bold leading-tight tracking-tight">QR Studio</h1>
+          <p class="text-[11px] text-gray-400 dark:text-gray-500 leading-tight">Design · Preview · Export</p>
+        </div>
+      </div>
+      <button id="themeToggle" class="btn !p-2.5 !rounded-full" aria-label="Toggle dark mode" title="Toggle dark mode">
+        <svg class="w-[18px] h-[18px] dark:hidden" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+        </svg>
+        <svg class="w-[18px] h-[18px] hidden dark:block" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/>
+          <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
+          <line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/>
+          <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+        </svg>
+      </button>
+    </div>
+  </header>
+
+  <main class="max-w-6xl mx-auto px-4 sm:px-6 py-8 grid grid-cols-1 lg:grid-cols-[1fr_400px] gap-8 items-start">
+
+    <!-- ============ RIGHT (preview) — first in DOM so it sits on top on mobile ============ -->
+    <aside class="lg:order-last lg:sticky lg:top-20 space-y-5" aria-label="QR code preview and export">
+      <div class="section !overflow-visible">
+        <div class="p-5">
+          <div class="relative rounded-2xl bg-gradient-to-br from-gray-50 to-gray-100/80 dark:from-gray-800/50 dark:to-gray-900 border border-gray-100 dark:border-gray-800 p-6 grid place-items-center">
+            <div class="relative max-w-[300px] w-full">
+              <div id="frameWrap" class="transition-all">
+                <div id="qrBox" class="mx-auto drop-shadow-sm"></div>
+                <div id="frameLabel" class="hidden text-center font-bold py-2 text-lg" aria-hidden="true"></div>
+              </div>
+              <div id="previewOverlay"
+                   class="absolute -inset-3 hidden items-center justify-center rounded-2xl
+                          bg-white/90 dark:bg-gray-900/90 backdrop-blur-[2px] text-sm font-medium
+                          text-gray-500 dark:text-gray-300 text-center px-6">
+              </div>
+            </div>
+          </div>
+          <p id="payloadMeta" class="mt-3 text-[11px] font-medium text-gray-400 dark:text-gray-500 text-center break-all"></p>
+        </div>
+
+        <ul id="warnings" class="px-5 pb-2 space-y-2" aria-live="polite"></ul>
+
+        <div class="px-5 pb-5 pt-1 grid grid-cols-2 gap-2.5">
+          <button id="btnPng" class="btn btn-primary">
+            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
+            </svg>PNG
+          </button>
+          <button id="btnSvg" class="btn">
+            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
+            </svg>SVG
+          </button>
+          <button id="btnPdf" class="btn">
+            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
+            </svg>PDF
+          </button>
+          <button id="btnCopy" class="btn">
+            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+            </svg>Copy
+          </button>
+        </div>
+      </div>
+
+      <!-- Templates -->
+      <details class="section">
+        <summary>
+          <span>Templates</span>
+          <svg class="chev w-4 h-4 text-gray-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <polyline points="6 9 12 15 18 9"/>
+          </svg>
+        </summary>
+        <div class="section-body">
+          <div class="flex gap-2">
+            <input id="tplName" type="text" class="inp" placeholder="Template name" aria-label="Template name" />
+            <button id="tplSave" class="btn btn-primary shrink-0">Save</button>
+          </div>
+          <p class="hint">Saves the current design (colors, logo, frame, size) for reuse. Stored in this browser.</p>
+          <ul id="tplList" class="space-y-2"></ul>
+        </div>
+      </details>
+    </aside>
+
+    <!-- ============ LEFT (type + form + customization) ============ -->
+    <div class="space-y-6">
+
+      <div>
+        <h2 class="text-xl font-bold tracking-tight">Create your QR code</h2>
+        <p class="text-sm text-gray-400 dark:text-gray-500 mt-0.5">Pick a type, add your details, make it yours.</p>
+      </div>
+
+      <!-- Type tabs -->
+      <nav>
+        <h2 class="sr-only">QR code type</h2>
+        <div id="typeTabs" role="tablist" aria-label="QR code type" class="flex flex-wrap gap-2"></div>
+      </nav>
+
+      <!-- Per-type form (rendered by app.js) -->
+      <section id="typeForm" role="tabpanel" class="section !overflow-visible p-5 space-y-4" aria-live="polite"></section>
+
+      <!-- ===== Customization ===== -->
+      <div class="flex items-center gap-3 pt-1">
+        <h2 class="text-[11px] font-bold uppercase tracking-[0.15em] text-gray-400 dark:text-gray-500">Customize</h2>
+        <div class="h-px flex-1 bg-gradient-to-r from-gray-200 dark:from-gray-800 to-transparent"></div>
+      </div>
+
+      <!-- Colors -->
+      <details class="section" open>
+        <summary>
+          <span>Colors</span>
+          <span class="flex items-center gap-4">
+            <button type="button" class="reset-btn" data-reset="colors">Reset</button>
+            <svg class="chev w-4 h-4 text-gray-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <polyline points="6 9 12 15 18 9"/>
+            </svg>
+          </span>
+        </summary>
+        <div class="section-body">
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <label class="lbl" for="fgColor">Dots (foreground)</label>
+              <input id="fgColor" type="color" class="color-inp" data-bind="fg" />
+            </div>
+            <div>
+              <label class="lbl" for="bgColor">Background</label>
+              <input id="bgColor" type="color" class="color-inp" data-bind="bg" />
+            </div>
+          </div>
+          <label class="flex items-center gap-2.5 text-sm font-medium">
+            <input id="gradOn" type="checkbox" class="w-4 h-4 accent-indigo-600" data-bind="gradientOn" />
+            Use a gradient for the dots
+          </label>
+          <div id="gradControls" class="hidden space-y-4">
+            <div class="grid grid-cols-2 gap-4">
+              <div>
+                <label class="lbl" for="gradType">Gradient type</label>
+                <select id="gradType" class="inp" data-bind="gradientType">
+                  <option value="linear">Linear</option>
+                  <option value="radial">Radial</option>
+                </select>
+              </div>
+              <div>
+                <label class="lbl" for="gradColor2">Second color</label>
+                <input id="gradColor2" type="color" class="color-inp" data-bind="fg2" />
+              </div>
+            </div>
+            <div id="gradRotWrap">
+              <label class="lbl flex items-center justify-between" for="gradRotation">Rotation <span class="out-badge" data-out="gradientRotation">0°</span></label>
+              <input id="gradRotation" type="range" min="0" max="360" step="5" class="range-inp" data-bind="gradientRotation" />
+            </div>
+          </div>
+        </div>
+      </details>
+
+      <!-- Dot & corner styles -->
+      <details class="section" open>
+        <summary>
+          <span>Dot &amp; corner style</span>
+          <span class="flex items-center gap-4">
+            <button type="button" class="reset-btn" data-reset="style">Reset</button>
+            <svg class="chev w-4 h-4 text-gray-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <polyline points="6 9 12 15 18 9"/>
+            </svg>
+          </span>
+        </summary>
+        <div class="section-body">
+          <div>
+            <label class="lbl" for="dotStyle">Dot style</label>
+            <select id="dotStyle" class="inp" data-bind="dotStyle">
+              <option value="square">Square</option>
+              <option value="rounded">Rounded</option>
+              <option value="dots">Dots</option>
+              <option value="classy">Classy</option>
+              <option value="classy-rounded">Classy rounded</option>
+              <option value="extra-rounded">Extra rounded</option>
+            </select>
+          </div>
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <label class="lbl" for="eyeFrameStyle">Eye frame style</label>
+              <select id="eyeFrameStyle" class="inp" data-bind="eyeFrameStyle">
+                <option value="square">Square</option>
+                <option value="extra-rounded">Rounded</option>
+                <option value="dot">Circle</option>
+              </select>
+            </div>
+            <div>
+              <label class="lbl" for="eyeFrameColor">Eye frame color</label>
+              <input id="eyeFrameColor" type="color" class="color-inp" data-bind="eyeFrameColor" />
+            </div>
+            <div>
+              <label class="lbl" for="eyeDotStyle">Eye center style</label>
+              <select id="eyeDotStyle" class="inp" data-bind="eyeDotStyle">
+                <option value="square">Square</option>
+                <option value="dot">Circle</option>
+              </select>
+            </div>
+            <div>
+              <label class="lbl" for="eyeDotColor">Eye center color</label>
+              <input id="eyeDotColor" type="color" class="color-inp" data-bind="eyeDotColor" />
+            </div>
+          </div>
+        </div>
+      </details>
+
+      <!-- Logo -->
+      <details class="section" open>
+        <summary>
+          <span>Logo</span>
+          <span class="flex items-center gap-4">
+            <button type="button" class="reset-btn" data-reset="logo">Reset</button>
+            <svg class="chev w-4 h-4 text-gray-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <polyline points="6 9 12 15 18 9"/>
+            </svg>
+          </span>
+        </summary>
+        <div class="section-body">
+          <div id="dropzone" tabindex="0" role="button" aria-label="Upload a logo: click or drop a PNG, JPG or SVG file"
+               class="flex flex-col items-center justify-center gap-1.5 rounded-2xl border-2 border-dashed
+                      border-gray-200 dark:border-gray-700 bg-gray-50/60 dark:bg-gray-800/30 px-4 py-7
+                      text-center text-sm text-gray-500 dark:text-gray-400 cursor-pointer
+                      hover:border-indigo-300 dark:hover:border-indigo-700 hover:bg-indigo-50/40 dark:hover:bg-indigo-500/5
+                      transition focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500">
+            <svg class="w-6 h-6 text-gray-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/>
+            </svg>
+            <span><span class="font-semibold text-indigo-600 dark:text-indigo-400">Click to upload</span> or drag &amp; drop</span>
+            <span class="text-xs text-gray-400">PNG, JPG or SVG · max 2 MB</span>
+          </div>
+          <input id="logoFile" type="file" accept=".png,.jpg,.jpeg,.svg,image/png,image/jpeg,image/svg+xml" class="hidden" />
+
+          <div id="logoThumbWrap" class="hidden items-center gap-3 rounded-xl bg-gray-50 dark:bg-gray-800/50 border border-gray-100 dark:border-gray-800 px-3 py-2.5">
+            <img id="logoThumb" alt="Current logo" class="w-11 h-11 rounded-lg border border-gray-200 dark:border-gray-700 object-contain bg-white" />
+            <span id="logoName" class="text-sm font-medium text-gray-600 dark:text-gray-300 truncate flex-1"></span>
+            <button id="logoRemove" class="btn !py-1.5 !px-2.5 !text-xs">Remove</button>
+          </div>
+
+          <div>
+            <span class="lbl">Preset logos</span>
+            <div id="presetRow" class="flex flex-wrap gap-2"></div>
+          </div>
+
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <label class="lbl flex items-center justify-between" for="logoSize">Size <span class="out-badge" data-out="logoSize">22%</span></label>
+              <input id="logoSize" type="range" min="10" max="30" step="1" class="range-inp" data-bind="logoSize" />
+            </div>
+            <div>
+              <label class="lbl flex items-center justify-between" for="logoMargin">Margin <span class="out-badge" data-out="logoMargin">6px</span></label>
+              <input id="logoMargin" type="range" min="0" max="20" step="1" class="range-inp" data-bind="logoMargin" />
+            </div>
+          </div>
+          <label class="flex items-center gap-2.5 text-sm font-medium">
+            <input id="hideDots" type="checkbox" class="w-4 h-4 accent-indigo-600" data-bind="hideDots" />
+            Hide dots behind the logo
+          </label>
+        </div>
+      </details>
+
+      <!-- Frame -->
+      <details class="section">
+        <summary>
+          <span>Frame &amp; label</span>
+          <span class="flex items-center gap-4">
+            <button type="button" class="reset-btn" data-reset="frame">Reset</button>
+            <svg class="chev w-4 h-4 text-gray-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <polyline points="6 9 12 15 18 9"/>
+            </svg>
+          </span>
+        </summary>
+        <div class="section-body">
+          <label class="flex items-center gap-2.5 text-sm font-medium">
+            <input id="frameOn" type="checkbox" class="w-4 h-4 accent-indigo-600" data-bind="frameOn" />
+            Add a frame with a call-to-action label
+          </label>
+          <div id="frameControls" class="hidden space-y-4">
+            <div>
+              <label class="lbl" for="frameText">Label text</label>
+              <input id="frameText" type="text" class="inp" maxlength="30" placeholder="Scan me" data-bind="frameText" />
+            </div>
+            <div class="grid grid-cols-2 gap-4">
+              <div>
+                <label class="lbl" for="frameColor">Frame color</label>
+                <input id="frameColor" type="color" class="color-inp" data-bind="frameColor" />
+              </div>
+              <div>
+                <label class="lbl" for="frameTextColor">Label color</label>
+                <input id="frameTextColor" type="color" class="color-inp" data-bind="frameTextColor" />
+              </div>
+            </div>
+          </div>
+        </div>
+      </details>
+
+      <!-- Size & quality -->
+      <details class="section">
+        <summary>
+          <span>Size &amp; quality</span>
+          <span class="flex items-center gap-4">
+            <button type="button" class="reset-btn" data-reset="size">Reset</button>
+            <svg class="chev w-4 h-4 text-gray-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <polyline points="6 9 12 15 18 9"/>
+            </svg>
+          </span>
+        </summary>
+        <div class="section-body">
+          <div>
+            <label class="lbl flex items-center justify-between" for="sizePx">Export size <span class="out-badge" data-out="size">600px</span></label>
+            <input id="sizePx" type="range" min="200" max="2000" step="20" class="range-inp" data-bind="size" />
+          </div>
+          <div>
+            <label class="lbl flex items-center justify-between" for="marginPx">Quiet zone (margin) <span class="out-badge" data-out="margin">16px</span></label>
+            <input id="marginPx" type="range" min="0" max="60" step="2" class="range-inp" data-bind="margin" />
+          </div>
+          <div>
+            <label class="lbl" for="ecLevel">Error correction</label>
+            <select id="ecLevel" class="inp" data-bind="ecLevel">
+              <option value="L">L — low (7%)</option>
+              <option value="M">M — medium (15%)</option>
+              <option value="Q">Q — quartile (25%)</option>
+              <option value="H">H — high (30%)</option>
+            </select>
+            <p id="ecNote" class="hint hidden">Locked to <strong>H</strong> while a logo is present, so the code stays scannable.</p>
+          </div>
+        </div>
+      </details>
+    </div>
+  </main>
+
+  <div id="toast" class="fixed bottom-6 left-1/2 -translate-x-1/2 hidden rounded-full bg-gray-900/95 text-white
+                         dark:bg-white dark:text-gray-900 px-5 py-2.5 text-sm font-semibold shadow-xl z-50" role="status"></div>
+
+  <script src="js/payloads.js"></script>
+  <script src="js/presets.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
